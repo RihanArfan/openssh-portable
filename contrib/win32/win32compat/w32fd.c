@@ -299,17 +299,11 @@ w32_socket(int domain, int type, int protocol)
 	if (min_index == -1)
 		return -1;
 	
-	if (domain == AF_UNIX && type == SOCK_STREAM) {
-		pio = fileio_afunix_socket();		
-		if (pio == NULL)
-			return -1;
-		pio->type = NONSOCK_FD;
-	} else {
-		pio = socketio_socket(domain, type, protocol);
-		if (pio == NULL)
-			return -1;
-		pio->type = SOCK_FD;
-	}	
+	pio = socketio_socket(domain, type, protocol);
+	if (pio == NULL)
+		return -1;
+	pio->type = SOCK_FD;
+
 
 	fd_table_set(pio, min_index);
 	debug4("socket:%d, socktype:%d, io:%p, fd:%d ", pio->sock, type, pio, min_index);

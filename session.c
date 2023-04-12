@@ -198,8 +198,15 @@ auth_input_request_forwarding(struct ssh *ssh, struct passwd * pw)
 	/* Temporarily drop privileged uid for mkdir/bind. */
 	temporarily_use_uid(pw);
 
+#ifdef WINDOWS
+	/* Allocate a buffer for the socket name, and format the name. */
+	auth_sock_dir = xstrdup("C:\\tmp\\ssh-XXXXXXXXXX");
+
+#else
 	/* Allocate a buffer for the socket name, and format the name. */
 	auth_sock_dir = xstrdup("/tmp/ssh-XXXXXXXXXX");
+#endif
+
 
 	/* Create private directory for socket */
 	if (mkdtemp(auth_sock_dir) == NULL) {
@@ -211,8 +218,13 @@ auth_input_request_forwarding(struct ssh *ssh, struct passwd * pw)
 		goto authsock_err;
 	}
 
+#ifdef WINDOWS
+	xasprintf(&auth_sock_name, "%s\\agent.%ld",
+		auth_sock_dir, (long)getpid());
+#else
 	xasprintf(&auth_sock_name, "%s/agent.%ld",
-	    auth_sock_dir, (long) getpid());
+		auth_sock_dir, (long)getpid());
+#endif
 
 	/* Start a Unix listener on auth_sock_name. */
 	sock = unix_listener(auth_sock_name, SSH_LISTEN_BACKLOG, 0);
