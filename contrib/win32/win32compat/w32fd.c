@@ -52,6 +52,7 @@
 #include <sys\utime.h>
 #include "misc_internal.h"
 #include "debug.h"
+#include "../../../config.h"
 
 /* internal table that stores the fd to w32_io mapping*/
 struct w32fd_table {

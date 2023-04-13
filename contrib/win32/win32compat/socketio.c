@@ -29,9 +29,6 @@
 */
 
 #include <winsock2.h>
-#ifdef HAVE_AFUNIX_H
-#include <afunix.h>
-#endif
 #include <ws2tcpip.h>
 #include <mswsock.h>
 #include <errno.h>
@@ -41,6 +38,10 @@
 #include "inc\utf.h"
 #include "misc_internal.h"
 #include "debug.h"
+#include "../../../config.h"
+#ifdef HAVE_AFUNIX_H
+#include <afunix.h>
+#endif
 
 #define INTERNAL_SEND_BUFFER_SIZE 70*1024 //70KB
 #define INTERNAL_RECV_BUFFER_SIZE 70*1024 //70KB
