@@ -29,7 +29,9 @@
 */
 
 #include <winsock2.h>
+#ifdef HAVE_AFUNIX_H
 #include <afunix.h>
+#endif
 #include <ws2tcpip.h>
 #include <mswsock.h>
 #include <errno.h>
@@ -119,7 +121,12 @@ socketio_acceptEx(struct w32_io* pio)
 	}
 
 	/* create accepting socket */
+	#ifdef HAVE_AFUNIX_H
 	context->accept_socket = socket(addr.ss_family, SOCK_STREAM, IPPROTO_IP);
+	#else
+	context->accept_socket = socket(addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
+	#endif
+
 	if (context->accept_socket == INVALID_SOCKET) {
 		errno = errno_from_WSALastError();
 		debug3("acceptEx - socket() ERROR:%d, io:%p", WSAGetLastError(), pio);
@@ -757,7 +764,10 @@ on_error:
 int
 socketio_connectex(struct w32_io* pio, const struct sockaddr* name, int namelen)
 {
+	#ifdef HAVE_AFUNIX_H
 	struct sockaddr_un tmp_unix;
+	#endif
+
 	struct sockaddr_in tmp_addr4;
 	struct sockaddr_in6 tmp_addr6;
 	SOCKADDR* tmp_addr;
@@ -779,11 +789,13 @@ socketio_connectex(struct w32_io* pio, const struct sockaddr* name, int namelen)
 		tmp_addr4.sin_port = 0;
 		tmp_addr = (SOCKADDR*)&tmp_addr4;
 		tmp_addr_len = sizeof(tmp_addr4);
+	#ifdef HAVE_AFUNIX_H
 	} else if (name->sa_family == AF_UNIX) {
 		ZeroMemory(&tmp_unix, sizeof(tmp_unix));
 		tmp_unix.sun_family = AF_UNIX;
 		tmp_addr = (SOCKADDR*)&tmp_unix;
 		tmp_addr_len = sizeof(tmp_unix);
+	#endif
 	} else {
 		errno = ENOTSUP;
 		debug3("connectex - ERROR: unsuppored address family:%d, io:%p", name->sa_family, pio);
