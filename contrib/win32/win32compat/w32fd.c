@@ -300,12 +300,6 @@ w32_socket(int domain, int type, int protocol)
 	if (min_index == -1)
 		return -1;
 
-	#ifdef HAVE_AFUNIX_H
-	pio = socketio_socket(domain, type, protocol);
-	if (pio == NULL)
-		return -1;
-	pio->type = SOCK_FD;
-	#else
 	if (domain == AF_UNIX && type == SOCK_STREAM) {
 		pio = fileio_afunix_socket();
 		if (pio == NULL)
@@ -317,7 +311,65 @@ w32_socket(int domain, int type, int protocol)
 			return -1;
 		pio->type = SOCK_FD;
 	}
+
+	fd_table_set(pio, min_index);
+	debug4("socket:%d, socktype:%d, io:%p, fd:%d ", pio->sock, type, pio, min_index);
+	return min_index;
+}
+
+int
+w32_afunix_socket(struct sockaddr_un* addr)
+{
+	#ifdef HAVE_AFUNIX_H
+	/*
+		If HAVE_AFUNIX_H is defined, we can be dealing with the ssh-agent named pipe or
+		a AF_UNIX socket if ssh forwarding is enabled. If the addr->sun_path is the
+		the well known named pipe, we open the socket with w32_fileio.
+	*/
+	if(strcmp(addr->sun_path, "\\\\.\\pipe\\openssh-ssh-agent") == 0)
+		return w32_fileio_socket(SOCK_STREAM, 0);
+	else
+		return w32_unix_socket(SOCK_STREAM, 0);
+	#else
+		return w32_socket(AF_UNIX, SOCK_STREAM, 0);
 	#endif
+}
+
+int
+w32_unix_socket(int type, int protocol)
+{
+	int domain = AF_UNIX;
+	int min_index = fd_table_get_min_index();
+	struct w32_io* pio = NULL;
+
+	errno = 0;
+	if (min_index == -1)
+		return -1;
+
+	pio = socketio_socket(domain, type, protocol);
+	if (pio == NULL)
+		return -1;
+	pio->type = SOCK_FD;
+
+	fd_table_set(pio, min_index);
+	debug4("socket:%d, socktype:%d, io:%p, fd:%d ", pio->sock, type, pio, min_index);
+	return min_index;
+}
+
+int
+w32_fileio_socket(int type, int protocol)
+{
+	int min_index = fd_table_get_min_index();
+	struct w32_io* pio = NULL;
+
+	errno = 0;
+	if (min_index == -1)
+		return -1;
+
+	pio = fileio_afunix_socket();
+	if (pio == NULL)
+		return -1;
+	pio->type = NONSOCK_FD;
 
 	fd_table_set(pio, min_index);
 	debug4("socket:%d, socktype:%d, io:%p, fd:%d ", pio->sock, type, pio, min_index);
