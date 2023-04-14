@@ -1,5 +1,5 @@
-	$OpenBSD: cfgmatch.sh,v 1.13 2021/06/08 06:52:43 djm Exp $
-	Placed in the Public Domain.
+#	$OpenBSD: cfgmatch.sh,v 1.13 2021/06/08 06:52:43 djm Exp $
+#	Placed in the Public Domain.
 
 tid="sshd_config match"
 
