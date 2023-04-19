@@ -326,7 +326,11 @@ w32_afunix_socket(struct sockaddr_un* addr)
 		a AF_UNIX socket if ssh forwarding is enabled. If the addr->sun_path is the
 		the well known named pipe, we open the socket with w32_fileio.
 	*/
-	if(strcmp(addr->sun_path, "\\\\.\\pipe\\openssh-ssh-agent") == 0)
+	int len = wcslen(AGENT_PIPE_ID);
+	char* pipeid = (char*)malloc(len + 1);
+	memset(pipeid, 0, len + 1);
+
+	if(wcstombs(pipeid, AGENT_PIPE_ID, len + 1) != (size_t) -1 && strcmp(addr->sun_path, pipeid) == 0)
 		return w32_fileio_socket(SOCK_STREAM, 0);
 	else
 		return w32_unix_socket(SOCK_STREAM, 0);
