@@ -2296,7 +2296,7 @@ muxclient(const char *path)
 
 	#ifdef HAVE_AFUNIX_H
 	sock = w32_afunix_socket(&addr);
-	#elif
+	#else
 	sock = socket(PF_UNIX, SOCK_STREAM, 0);
 	#endif
 
