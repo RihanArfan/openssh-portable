@@ -60,6 +60,7 @@
 #include "w32fd.h"
 #include "inc\string.h"
 #include "inc\time.h"
+#include "..\..\..\sshfileperm.h"
 
 #include <wchar.h>
 
@@ -190,7 +191,7 @@ nanosleep(const struct timespec *req, struct timespec *rem)
  * Copyright (c) 2009, 2010 NoMachine
  * All rights reserved
  */
-static int
+int
 gettimeofday(struct timeval *tv, void *tz)
 {
 	union {
@@ -212,7 +213,7 @@ gettimeofday(struct timeval *tv, void *tz)
 	return 0;
 }
 
-static void
+void
 explicit_bzero(void *b, size_t len)
 {
 	SecureZeroMemory(b, len);
@@ -291,7 +292,7 @@ error:
 }
 
 /*fopen on Windows to mimic https://linux.die.net/man/3/fopen
-* only r, w, a are supported for now
+* only r, w, a, a+ are supported for now
 */
 FILE *
 w32_fopen_utf8(const char *input_path, const char *mode)
@@ -304,7 +305,7 @@ w32_fopen_utf8(const char *input_path, const char *mode)
 	errno_t r = 0;
 	int nonfs_dev = 0; /* opening a non file system device */
 
-	if (mode == NULL || mode[1] != '\0') {
+	if (mode == NULL || (mode[1] != '\0' && strncmp(mode, "a+", 2) != 0)) {
 		errno = ENOTSUP;
 		return NULL;
 	}
@@ -1443,6 +1444,13 @@ create_directory_withsddl(wchar_t *path_w, wchar_t *sddl_w)
 			return -1;
 		}
 	}
+	else {
+		// directory already exists; need to confirm permissions are correct
+		if (check_secure_folder_permission(path_w, 1) != 0) {
+			error("Directory already exists but folder permissions are invalid");
+			return -1;
+		}
+	}
 
 	return 0;
 }
@@ -1502,15 +1510,6 @@ w32_ctime(const time_t* sourceTime)
 		return NULL;
 	}
 	return ctime_s(destTime, 26, sourceTime) == 0 ? destTime : NULL;
-}
-
-void
-freezero(void *ptr, size_t sz)
-{
-	if (ptr == NULL)
-		return;
-	explicit_bzero(ptr, sz);
-	free(ptr);
 }
 
 int 

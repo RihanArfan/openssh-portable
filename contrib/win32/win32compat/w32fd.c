@@ -89,6 +89,19 @@ fd_table_initialize()
 {
 	struct w32_io *pio;
 	HANDLE wh;
+	char *stdio_mode_env;
+	int stdio_mode = NONSOCK_SYNC_FD;
+
+	stdio_mode_env = getenv("OPENSSH_STDIO_MODE");
+	if (stdio_mode_env != NULL) {
+		if (strcmp(stdio_mode_env, "sock") == 0)
+			stdio_mode = SOCK_FD;
+		else if (strcmp(stdio_mode_env, "nonsock") == 0)
+			stdio_mode = NONSOCK_FD;
+		else if (strcmp(stdio_mode_env, "nonsock_sync") == 0)
+			stdio_mode = NONSOCK_SYNC_FD;
+	}
+
 	/* table entries representing std in, out and error*/
 	DWORD wh_index[] = { STD_INPUT_HANDLE , STD_OUTPUT_HANDLE , STD_ERROR_HANDLE };
 	int fd_num = 0;
@@ -105,7 +118,7 @@ fd_table_initialize()
 				return -1;
 			}
 			memset(pio, 0, sizeof(struct w32_io));
-			pio->type = NONSOCK_SYNC_FD;
+			pio->type = stdio_mode;
 			pio->handle = wh;
 			fd_table_set(pio, fd_num);
 		}
@@ -1111,7 +1124,7 @@ char * build_commandline_string(const char* cmd, char *const argv[], BOOLEAN pre
 * spawned child will run as as_user if its not NULL
 */
 static int
-spawn_child_internal(const char* cmd, char *const argv[], HANDLE in, HANDLE out, HANDLE err, unsigned long flags, HANDLE* as_user, BOOLEAN prepend_module_path)
+spawn_child_internal(const char* cmd, char *const argv[], HANDLE in, HANDLE out, HANDLE err, unsigned long flags, HANDLE as_user, BOOLEAN prepend_module_path)
 {
 	PROCESS_INFORMATION pi;
 	STARTUPINFOW si;

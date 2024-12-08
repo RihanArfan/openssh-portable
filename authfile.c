@@ -1,4 +1,4 @@
-/* $OpenBSD: authfile.c,v 1.143 2022/06/21 14:52:13 tobhe Exp $ */
+/* $OpenBSD: authfile.c,v 1.144 2023/03/14 07:26:25 dtucker Exp $ */
 /*
  * Copyright (c) 2000, 2013 Markus Friedl.  All rights reserved.
  *
@@ -225,6 +225,8 @@ sshkey_try_load_public(struct sshkey **kp, const char *filename,
 	int r;
 	struct sshkey *k = NULL;
 
+	if (kp == NULL)
+		return SSH_ERR_INVALID_ARGUMENT;
 	*kp = NULL;
 	if (commentp != NULL)
 		*commentp = NULL;
@@ -513,11 +515,19 @@ sshkey_save_public(const struct sshkey *key, const char *path,
 
 	if ((fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0644)) == -1)
 		return SSH_ERR_SYSTEM_ERROR;
+#ifdef WINDOWS
+	/* Windows POSIX adapter does not support fdopen() on open(file)
+	   but still want file created with same owner as upstream */
+	close(fd);
+	if ((f = fopen(path, "w")) == NULL)
+		return SSH_ERR_SYSTEM_ERROR;
+#else /* WINDOWS */
 	if ((f = fdopen(fd, "w")) == NULL) {
 		r = SSH_ERR_SYSTEM_ERROR;
 		close(fd);
 		goto fail;
 	}
+#endif /* WINDOWS */
 	if ((r = sshkey_write(key, f)) != 0)
 		goto fail;
 	fprintf(f, " %s\n", comment);

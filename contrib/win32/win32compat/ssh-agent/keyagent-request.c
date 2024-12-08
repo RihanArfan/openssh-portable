@@ -32,6 +32,7 @@
 #include "agent.h"
 #include "agent-request.h"
 #include "config.h"
+#include "match.h"
 #include <sddl.h>
 #ifdef ENABLE_PKCS11
 #include "ssh-pkcs11.h"
@@ -43,6 +44,9 @@
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME_LENGTH 16383
 #define MAX_VALUE_DATA_LENGTH 2048
+
+extern char* allowed_providers;
+extern int remote_add_provider;
 
 /* 
  * get registry root where keys are stored 
@@ -660,10 +664,22 @@ int process_add_smartcard_key(struct sshbuf* request, struct sshbuf* response, s
 		goto done;
 	}
 
+	if (con->nsession_ids != 0 && !remote_add_provider) {
+		verbose("failed PKCS#11 add of \"%.100s\": remote addition of "
+		    "providers is disabled", provider);
+		goto done;
+	}
+	
 	if (realpath(provider, canonical_provider) == NULL) {
 		error("failed PKCS#11 add of \"%.100s\": realpath: %s",
 			provider, strerror(errno));
 		request_invalid = 1;
+		goto done;
+	}
+
+	if (match_pattern_list(canonical_provider, allowed_providers, 0) != 1) {
+		verbose("refusing PKCS#11 add of \"%.100s\": "
+			"provider not allowed", canonical_provider);
 		goto done;
 	}
 
@@ -758,6 +774,8 @@ done:
 		free(pubkey_blob);
 	if (provider)
 		free(provider);
+	if (allowed_providers)
+		free(allowed_providers);
 	if (pin) {
 		SecureZeroMemory(pin, (DWORD)pin_len);
 		free(pin);
